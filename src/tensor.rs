@@ -31,28 +31,42 @@ impl Tensor {
                 tensor.grad = Some(1.0);
             }
         }
+        println!("Starting backward, root grad: {:?}", self_.borrow().grad);
 
         let mut stack = vec![self_.clone()];
         while let Some(current) = stack.pop() {
             let grad = current.borrow().grad.clone().unwrap();
+            println!("Processing tensor with grad: {}", grad);
             
             let (grad_fn, parents) = {
                 let current_ref = current.borrow();
                 (current_ref.grad_fn.clone(), current_ref.parents.clone())
             };
+            println!("Has grad_fn: {}, num parents: {}", grad_fn.is_some(), parents.len());
 
             if let Some(op) = grad_fn {
+                println!("Calling backward on op: {:?}", op);
                 let grads = op.backward(&current, &grad);
-                for (parent, parent_grad) in parents.iter().zip(grads) {
-                    let mut p = parent.borrow_mut();
-                    p.grad = Some(match p.grad {
-                        Some(existing) => existing + parent_grad,
-                        None => parent_grad,
-                    });
-                    stack.push(parent.clone());
+                println!("Computed gradients: {:?}", grads);
+                
+                for (i, (parent, parent_grad)) in parents.iter().zip(grads).enumerate() {
+                    if parent.borrow().requires_grad {
+                        println!("Updating parent {}: old_grad={:?}, new_grad={}", 
+                        i, parent.borrow().grad, parent_grad);
+                        
+                        let mut p = parent.borrow_mut();
+                        p.grad = Some(match p.grad {
+                            Some(existing) => existing + parent_grad,
+                            None => parent_grad,
+                        });
+                        println!("Parent {} final grad: {:?}", i, p.grad);
+                        drop(p);
+                        stack.push(parent.clone())
+                    }
                 }
             }
         }
+        println!("Backward complete");
     }
 }
 

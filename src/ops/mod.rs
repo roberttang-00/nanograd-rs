@@ -1,5 +1,6 @@
 pub mod op_defs;
-pub mod add;
-pub mod mul;
-pub use add::add;
-pub use mul::mul;
+
+pub use op_defs::add;
+pub use op_defs::sub;
+pub use op_defs::mul;
+pub use op_defs::div;
