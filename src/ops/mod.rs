@@ -1,6 +1,8 @@
 pub mod op_defs;
 
-pub use op_defs::add;
-pub use op_defs::sub;
-pub use op_defs::mul;
-pub use op_defs::div;
+pub mod binary_ops;
+
+pub use binary_ops::add;
+pub use binary_ops::sub;
+pub use binary_ops::mul;
+pub use binary_ops::div;

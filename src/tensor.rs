@@ -1,4 +1,5 @@
 use crate::ops::op_defs::Op;
+use ndarray::ArrayD;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -6,15 +7,15 @@ pub type TensorRef = Rc<RefCell<Tensor>>;
 
 #[derive(Clone)]
 pub struct Tensor {
-    pub data: f32,
-    pub grad: Option<f32>,
+    pub data: ArrayD<f32>,
+    pub grad: Option<ArrayD<f32>>,
     pub requires_grad: bool,
     pub grad_fn: Option<Rc<dyn Op>>,
     pub parents: Vec<TensorRef>
 }
 
 impl Tensor {
-    pub fn new(data: f32, requires_grad: bool) -> TensorRef {
+    pub fn new(data: ArrayD<f32>, requires_grad: bool) -> TensorRef {
         Rc::new(RefCell::new(Tensor {
             data,
             grad: None,
@@ -28,7 +29,7 @@ impl Tensor {
         {
             let mut tensor = self_.borrow_mut();
             if tensor.grad.is_none() {
-                tensor.grad = Some(1.0);
+                tensor.grad = Some(ArrayD::ones(tensor.data.raw_dim()));
             }
         }
         println!("Starting backward, root grad: {:?}", self_.borrow().grad);
@@ -53,9 +54,9 @@ impl Tensor {
                     if parent.borrow().requires_grad {
                         println!("Updating parent {}: old_grad={:?}, new_grad={}", 
                         i, parent.borrow().grad, parent_grad);
-                        
+
                         let mut p = parent.borrow_mut();
-                        p.grad = Some(match p.grad {
+                        p.grad = Some(match &p.grad {
                             Some(existing) => existing + parent_grad,
                             None => parent_grad,
                         });
