@@ -7,6 +7,19 @@ pub trait Op: Debug {
     fn name(&self) -> &'static str { "PrimitiveOp "}
 }
 
+// Unary Ops
+
+#[derive(Debug)]
+pub struct Neg;
+
+#[derive(Debug)]
+pub struct Abs;
+
+#[derive(Debug)]
+pub struct ReLU;
+
+// Binary Ops
+
 #[derive(Debug)]
 pub struct Add;
 
