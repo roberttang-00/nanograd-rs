@@ -2,22 +2,118 @@ use crate::ops::op_defs::Op;
 use ndarray::ArrayD;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::fmt;
+use std::ops::{Add as StdAdd, Sub as StdSub, Mul as StdMul, Div as StdDiv, Neg as StdNeg};
+use std::convert::Into;
 
 pub type TensorRef = Rc<RefCell<Tensor>>;
 
+#[derive(Clone, Debug)]
+pub enum TensorData {
+    Scalar(f32),
+    Tensor(ArrayD<f32>)
+}
+
+impl fmt::Display for TensorData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TensorData::Scalar(x) => write!(f, "{}", x),
+            TensorData::Tensor(arr) => write!(f, "{:?}", arr)
+        }
+    }
+}
+
+impl From<f32> for TensorData {
+    fn from(value: f32) -> TensorData{
+        TensorData::Scalar(value)
+    }
+}
+
+impl From<ArrayD<f32>> for TensorData {
+    fn from(value: ArrayD<f32>) -> TensorData{
+        TensorData::Tensor(value)
+    }
+}
+
+impl StdNeg for &TensorData {
+    type Output = TensorData;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            TensorData::Scalar(a) => TensorData::Scalar(-*a),
+            TensorData::Tensor(a) => TensorData::Tensor(-a)
+        }
+    }
+}
+
+
+impl StdAdd for &TensorData {
+    type Output = TensorData;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (TensorData::Scalar(a), TensorData::Scalar(b)) => TensorData::Scalar(*a + *b),
+            (TensorData::Tensor(a), TensorData::Scalar(b)) => TensorData::Tensor(a + *b),
+            (TensorData::Scalar(a), TensorData::Tensor(b)) => TensorData::Tensor(*a + b),
+            (TensorData::Tensor(a), TensorData::Tensor(b)) => TensorData::Tensor(a + b)
+        }
+    }
+}
+
+impl StdSub for &TensorData {
+    type Output = TensorData;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (TensorData::Scalar(a), TensorData::Scalar(b)) => TensorData::Scalar(*a - *b),
+            (TensorData::Tensor(a), TensorData::Scalar(b)) => TensorData::Tensor(a - *b),
+            (TensorData::Scalar(a), TensorData::Tensor(b)) => TensorData::Tensor(*a - b),
+            (TensorData::Tensor(a), TensorData::Tensor(b)) => TensorData::Tensor(a - b)
+        }
+    }
+}
+
+impl StdMul for &TensorData {
+    type Output = TensorData;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (TensorData::Scalar(a), TensorData::Scalar(b)) => TensorData::Scalar(*a * *b),
+            (TensorData::Tensor(a), TensorData::Scalar(b)) => TensorData::Tensor(a * *b),
+            (TensorData::Scalar(a), TensorData::Tensor(b)) => TensorData::Tensor(*a * b),
+            (TensorData::Tensor(a), TensorData::Tensor(b)) => TensorData::Tensor(a * b)
+        }
+    }
+}
+
+
+impl StdDiv for &TensorData {
+    type Output = TensorData;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (TensorData::Scalar(a), TensorData::Scalar(b)) => TensorData::Scalar(*a / *b),
+            (TensorData::Tensor(a), TensorData::Scalar(b)) => TensorData::Tensor(a / *b),
+            (TensorData::Scalar(a), TensorData::Tensor(b)) => TensorData::Tensor(*a / b),
+            (TensorData::Tensor(a), TensorData::Tensor(b)) => TensorData::Tensor(a / b)
+        }
+    }
+}
+
+
 #[derive(Clone)]
 pub struct Tensor {
-    pub data: ArrayD<f32>,
-    pub grad: Option<ArrayD<f32>>,
+    pub data: TensorData,
+    pub grad: Option<TensorData>,
     pub requires_grad: bool,
     pub grad_fn: Option<Rc<dyn Op>>,
     pub parents: Vec<TensorRef>
 }
 
 impl Tensor {
-    pub fn new(data: ArrayD<f32>, requires_grad: bool) -> TensorRef {
+    pub fn new<T: Into<TensorData>>(data: T, requires_grad: bool) -> TensorRef {
         Rc::new(RefCell::new(Tensor {
-            data,
+            data: data.into(),
             grad: None,
             requires_grad,
             grad_fn: None,
@@ -29,7 +125,10 @@ impl Tensor {
         {
             let mut tensor = self_.borrow_mut();
             if tensor.grad.is_none() {
-                tensor.grad = Some(ArrayD::ones(tensor.data.raw_dim()));
+                tensor.grad = Some(match &tensor.data {
+                    TensorData::Scalar(_) => TensorData::Scalar(1.0),
+                    TensorData::Tensor(x) => TensorData::Tensor(ArrayD::ones(x.raw_dim()))
+                });
             }
         }
         println!("Starting backward, root grad: {:?}", self_.borrow().grad);
@@ -57,7 +156,7 @@ impl Tensor {
 
                         let mut p = parent.borrow_mut();
                         p.grad = Some(match &p.grad {
-                            Some(existing) => existing + parent_grad,
+                            Some(existing) => existing + &parent_grad,
                             None => parent_grad,
                         });
                         println!("Parent {} final grad: {:?}", i, p.grad);
