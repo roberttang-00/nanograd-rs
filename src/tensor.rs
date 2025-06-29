@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt;
 use std::ops::{Add as StdAdd, Sub as StdSub, Mul as StdMul, Div as StdDiv, Neg as StdNeg};
+use std::cmp::PartialEq;
 use std::convert::Into;
 
 pub type TensorRef = Rc<RefCell<Tensor>>;
@@ -46,6 +47,15 @@ impl StdNeg for &TensorData {
     }
 }
 
+impl PartialEq for &TensorData {
+    fn eq(&self, rhs: &Self) -> bool {
+        match (self, rhs) {
+            (TensorData::Scalar(a), TensorData::Scalar(b)) => *a == *b,
+            (TensorData::Tensor(a), TensorData::Tensor(b)) => a == b,
+            _ => panic!("Trying to compare scalar and array")
+        }
+    }
+}
 
 impl StdAdd for &TensorData {
     type Output = TensorData;
