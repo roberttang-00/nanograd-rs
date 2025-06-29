@@ -1,7 +1,6 @@
-use crate::tensor::{Tensor, TensorRef};
+use crate::tensor::TensorRef;
 use ndarray::ArrayD;
 use std::fmt::Debug;
-use std::rc::Rc;
 
 pub trait Op: Debug {
     fn forward(&self, inputs: &[&TensorRef]) -> ArrayD<f32>;
