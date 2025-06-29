@@ -31,3 +31,17 @@ pub struct Sub;
 
 #[derive(Debug)]
 pub struct Div;
+
+// Reduction Ops
+
+#[derive(Debug)]
+pub struct Sum {
+    pub axes: Option<Vec<usize>>,
+    pub keepdims: bool,
+}
+
+#[derive(Debug)]
+pub struct Mean {
+    pub axes: Option<Vec<usize>>,
+    pub keepdims: bool
+}

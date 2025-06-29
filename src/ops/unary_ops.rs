@@ -1,6 +1,5 @@
 use crate::tensor::*;
 use crate::ops::op_defs::{Op, Neg, Abs, ReLU};
-use std::cmp::max;
 use std::rc::Rc;
 
 impl Op for Neg {

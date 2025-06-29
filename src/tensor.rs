@@ -1,4 +1,4 @@
-use crate::ops::op_defs::Op;
+use crate::ops::op_defs::*;
 use ndarray::ArrayD;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -120,6 +120,12 @@ pub struct Tensor {
     pub parents: Vec<TensorRef>
 }
 
+impl fmt::Display for Tensor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, requires_grad: {})", self.data, self.requires_grad)
+    }
+}
+
 impl Tensor {
     pub fn new<T: Into<TensorData>>(data: T, requires_grad: bool) -> TensorRef {
         Rc::new(RefCell::new(Tensor {
@@ -141,44 +147,45 @@ impl Tensor {
                 });
             }
         }
-        println!("Starting backward, root grad: {:?}", self_.borrow().grad);
+        // println!("Starting backward, root grad: {:?}", self_.borrow().grad);
 
         let mut stack = vec![self_.clone()];
         while let Some(current) = stack.pop() {
             let grad = current.borrow().grad.clone().unwrap();
-            println!("Processing tensor with grad: {}", grad);
+            // println!("Processing tensor with grad: {}", grad);
             
             let (grad_fn, parents) = {
                 let current_ref = current.borrow();
                 (current_ref.grad_fn.clone(), current_ref.parents.clone())
             };
-            println!("Has grad_fn: {}, num parents: {}", grad_fn.is_some(), parents.len());
+            // println!("Has grad_fn: {}, num parents: {}", grad_fn.is_some(), parents.len());
 
             if let Some(op) = grad_fn {
-                println!("Calling backward on op: {:?}", op);
+                // println!("Calling backward on op: {:?}", op);
                 let grads = op.backward(&current, &grad);
-                println!("Computed gradients: {:?}", grads);
+                // println!("Computed gradients: {:?}", grads);
                 
                 for (i, (parent, parent_grad)) in parents.iter().zip(grads).enumerate() {
                     if parent.borrow().requires_grad {
-                        println!("Updating parent {}: old_grad={:?}, new_grad={}", 
-                        i, parent.borrow().grad, parent_grad);
+                        // println!("Updating parent {}: old_grad={:?}, new_grad={}", 
+                        // i, parent.borrow().grad, parent_grad);
 
                         let mut p = parent.borrow_mut();
                         p.grad = Some(match &p.grad {
                             Some(existing) => existing + &parent_grad,
                             None => parent_grad,
                         });
-                        println!("Parent {} final grad: {:?}", i, p.grad);
+                        // println!("Parent {} final grad: {:?}", i, p.grad);
                         drop(p);
                         stack.push(parent.clone())
                     }
                 }
             }
         }
-        println!("Backward complete");
+        // println!("Backward complete");
     }
 }
+
 
 pub trait TensorOps {
     fn backward(&self);
