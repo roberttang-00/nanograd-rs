@@ -10,7 +10,7 @@ use ops::*;
 fn main() {
     let a = Tensor::new(2.0, false);
     let b = Tensor::new(3.0, false);
-    let x = Tensor::new(10.0, true);
+    let x = Tensor::new(arr0(10.0).into_dyn(), true);
     let c = add(&div(&a, &x), &b);
     c.backward();
 
